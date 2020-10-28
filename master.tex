@@ -24,9 +24,7 @@
 % 2. Stellt eure Schreibumgebung um -> In TeXstudio: Optionen -> TeXstudio konfigurieren -> Erzeugen -> Standard Bibliographieprogramm
 \usepackage[backend=biber,style=apa,natbib=false]{biblatex}
 \DeclareLanguageMapping{american}{american-apa}         % Sprach Einstellung
-
 \addbibresource{BibliographieAbschlussarbeit.bib}       % Legt die Datei fest in der die Literatur liegt (z. B.: Export aus Citavi)
-
 \usepackage{breakcites}                                 % Falls Zitationen nicht ans Zeilenende passen
 \usepackage{csquotes}                                   % Erweitert die Möglichkeiten beim zitieren
 % ------------------------------------------------------------------------
@@ -63,6 +61,53 @@
 % \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}         % Zentriert mit Breitenangabe
 % \newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}        % Rechtsbündig mit Breitenangabe
 % \newcolumntype{x}[1]{!{\centering\arraybackslash\vrule width #1}}
+% ------------------------------------------------------------------------
+% Lua Wordcount
+% ------------------------------------------------------------------------
+\usepackage{luacode}
+% loads lua script
+\directlua{dofile(kpse.find_file"word_count.lua")}
+% defining latex commands to use lua functions easier 
+\def\setwordthreshold#1{
+  \directlua{packagedata.word_count.set_threshold(\number#1)}%
+}
+
+\def\startwordcount{
+  \directlua{
+    luatexbase.add_to_callback(
+    "pre_linebreak_filter",
+    packagedata.word_count.callback,
+    "word_count"
+    )
+  }
+}
+
+\def\stopwordcount{
+  \endgraf %% force paragraph
+  \directlua{
+    luatexbase.remove_from_callback(
+    "pre_linebreak_filter",
+    "word_count"
+    )
+  }
+}
+
+% Creates Logfile
+\def\dumpwordcount{%
+  \directlua{packagedata.word_count.dump_total_word_count()}
+}
+% This returns the normalized sides at the current position
+\def\dumprelativwordcount{%
+  \directlua{packagedata.word_count.dump_relativ_word_count()}%
+}
+
+% This returns the word count at the current position.
+\def\currentwordcount{%
+  \directlua{packagedata.word_count.current_word_count()}
+}
+
+% Text result
+\def\prittyresult{\directlua{packagedata.word_count.pritty_result()}}
 
 % ------------------------------------------------------------------------
 % Sonstige
@@ -98,10 +143,24 @@
 \include{sections/titel}              % Titelseite einbinden
 \pagenumbering{arabic}                % Löst unnötigen Warnungen
 \include{sections/abstract}
+\onehalfspacing
+% ------------------------------------------------------------------------
+% Hauptarbeit (hier werden alle Kapitel eingebunden)
+% ------------------------------------------------------------------------
+\setwordthreshold{2}                   % min chars in a row to count as word
+\startwordcount                        % start counting words
+
 \include{sections/introduction}
 \include{sections/figurestables}
 \include{sections/combinatorialAuctions}
 \include{sections/conclusion}
+
+\stopwordcount                         % stopwordcount
+\dumpwordcount                         % Cretaes log file
+\prittyresult                          % Gibt im Fließtext Anzahl Wörter /Seiten aus --> Auskommentieren für die Abgabe!
+% ------------------------------------------------------------------------
+% Hauptarbeit ENDE
+% ------------------------------------------------------------------------
 
 % ------------------------------------------------------------------------
 % Erstellen des Literaturverzeichnisses
